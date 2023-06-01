@@ -1,0 +1,389 @@
+Lab 1
+Sql – запити для створення таблиць
+--Створення таблиці «Тип приміщення»---
+CREATE TABLE apartmentType(
+TypeID INT PRIMARY KEY not null,
+TypeNames VARCHAR(200)not null,
+TypePrice int not null,)
+
+--Створення таблиці «Приміщення»---
+CREATE TABLE apartment(
+ApartmentID INT PRIMARY KEY not null,
+ApartmentNumber VARCHAR(200) not null,
+ApartmentArea FLOAT not null,
+TypeID INT not null,
+foreign key (TypeID) references apartmentType(TypeID) )
+
+--Створення таблиці «Банк»---
+create table bank(
+BankID INT PRIMARY KEY not null,
+BankName VARCHAR(200),
+Registrationcod int unique not null ) 
+
+--Створення таблиці «Орендар»---
+CREATE TABLE tenant(
+TenantID INT PRIMARY KEY not null,
+TenantNames VARCHAR(200) not null,
+TenantlegalAddress varchar(200) unique not null,
+BankID int not null,
+BankDirector varchar(200) not null,
+Characteristic varchar,
+foreign key(BankID)references bank(BankID))
+
+--Створення таблиці «Оренда»---
+CREATE TABLE rent(
+RentID INT PRIMARY KEY not null,
+TenantID int not null,
+ApartmentID int not null,
+Termfrom date not null,
+Termupto date not null,
+foreign key(TenantID)references tenant(TenantID),
+foreign key(ApartmentID)references apartment(ApartmentID))
+
+--Створення таблиці «Рахунок»---
+CREATE TSBLE counts(
+CountsID INT PRIMARY KEY not null,
+CountsSumma int not null,
+CountsData date not null,
+CountsPenia int not null,
+TenantID int not null,
+foreign key(TenantID)references tenant(TenantID))
+SQL-запити для наповнення таблиць:
+
+- - Додавання записів до таблиці «Тип приміщення»---
+insert into apartmentType values (1,'room',200);
+insert into apartmentType values (2,'warehouse',500);
+
+- - Додавання записів до таблиці «Приміщення»---
+insert into apartment values (1, 1,150,1);
+insert into apartment values (2, 2,100,1);
+insert into apartment values (3,3,200,2);
+
+- - Додавання записів до таблиці «Банк»--
+insert into bank values (1, 'Privat24',4567);
+insert into bank values (2,'Oshad', 1234);
+- - Додавання записів до таблиці «Орендар»--
+insert into tenant values (1, 'VDS','Україна, **1, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок **Д',1,'Voitsikhovska Daryna Stepanivna','');
+insert into tenant values (2,'NAP','Україна, **1, місто Київ, ВУЛИЦЯ ГОСПІТАЛЬНА, будинок **Д', 2, 'Nahirna Andriana Petrivna','');
+
+- - Додавання записів до таблиці «Оренда»--
+insert into rent values (1,1,2,'2022-02-03','2023-02-03');
+insert into rent values (2,2,1,'2021-02-03','2022-02-03');
+insert into rent values (3,2,2,'2021-09-07','2022-07-09');
+
+- - Додавання записів до таблиці «Рахунок»--
+insert into counts values (1,2020,'2022-04-04',0,1);
+insert into counts values (2,3020,'2022-03-04',0,1);
+
+
+
+Lab 2
+1. SELECT * from counts
+WHERE (CountsData = '2022-04-04' OR CountsData = '2022-03-04')
+AND CountsSumma > 2000
+2. SELECT CountsSumma, CountsData, CountsPenia, CountsSumma * CountsPenia as debt from counts
+3. SELECT *
+FROM counts
+INNER JOIN tenant ON counts.TenantID = tenant.TenantID
+WHERE (counts.CountsSumma = '1020 ' OR tenant.TenantNames = 'NAP')
+AND counts.CountsData = '2020-08-04'
+ORDER BY CountsSumma ASC;
+4. SELECT *
+FROM tenant
+LEFT JOIN rent ON tenant.TenantID = rent.TenantID;
+5. 1) SELECT *
+FROM bank
+WHERE BankName LIKE '%Oshad%'
+2)SELECT *
+FROM rent
+WHERE Termfrom BETWEEN '2021-03-03' AND '2022-02-03';
+3)SELECT *
+FROM apartment
+WHERE ApartmentArea IN ('150', '100');
+4) SELECT *
+FROM counts p
+WHERE EXISTS (
+      SELECT 1
+      FROM counts
+      WHERE CountsData > '2021-08-01' AND CountsID = p.CountsID);
+5) SELECT *
+FROM apartment
+WHERE TypeID = ALL (SELECT TypeID FROM apartmentType WHERE TypeNames LIKE 'room');
+6) SELECT *
+FROM apartment
+WHERE ApartmentID = ANY (SELECT TypeID FROM apartmentType WHERE ApartmentArea = '100');
+
+6. SELECT CountsSumma, SUM (CountsPenia) as total
+FROM  counts
+GROUP BY CountsSumma
+
+7. SELECT TenantNames, TenantlegalAddress, Characteristic
+FROM tenant
+WHERE BankID IN (SELECT BankID FROM bank WHERE BankName = 'Privat24');
+
+8.  SELECT t1.CountsSumma, t2.total
+FROM counts t1, (SELECT SUM(TypePrice) as total FROM apartmentType) t2;
+
+
+9. WITH RECURSIVE apartment_tree (ApartmentID, ApartmentNumber, ApartmentArea, TypeID) AS (
+  SELECT ApartmentID, ApartmentNumber, ApartmentArea, TypeID FROM apartment WHERE ApartmentID = 1
+  UNION ALL
+  SELECT c.ApartmentID, c.ApartmentNumber, c.ApartmentArea, c.TypeID  FROM apartment c
+  JOIN apartment_tree s ON c.TypeID = s.TypeID
+)
+SELECT * from apartment_tree
+
+10.SELECT
+  Characteristic,
+  SUM(CASE WHEN TenantNames = 'VDS' AND TenantlegalAddress = 'Україна, **1, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок **Д' THEN TenantID ELSE 0 END) AS "VDS - Україна, **1, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок **Д",
+  SUM(CASE WHEN TenantNames = 'NAP' AND TenantlegalAddress = 'Україна, **1, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок **Д' THEN TenantID ELSE 0 END) AS "NAP - Україна, **1, місто Київ, ВУЛИЦЯ ГРУШЕВСЬКОГО, будинок **Д"
+  
+FROM  tenant
+GROUP BY Characteristic;
+
+11.UPDATE counts
+SET CountsPenia = CountsPenia + 5
+WHERE CountsID = 2;
+
+12. UPDATE counts
+SET CountsSumma = CountsSumma + 5
+FROM tenant
+WHERE tenant.TenantID = counts.TenantID AND tenant.TenantNames = 'VDS';
+
+
+13. insert into bank (BankID, BankName, Registrationcod)
+values (3,'Maths', 4789);	
+
+14. insert into apartmentType(TypeID, TypeNames, TypePrice) 
+select 4, ApartmentNumber, 1020
+from apartment
+where ApartmentID = 2;
+
+15. DELETE FROM apartmentType;
+
+16. DELETE FROM apartment
+WHERE ApartmentNumber = 2;
+Lab 3
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE CalculateInterestForClient @renter_id INT
+AS
+BEGIN
+  DECLARE @contractId INT, @lastCalculationDate DATE, @currentDate DATE, @interest DECIMAL(10, 2), @loanAmount DECIMAL(10, 2)
+
+  -- Визначаємо ідентифікатор кредитного договору
+  SELECT @contractId = CountsID FROM counts WHERE TenantID = @renter_id
+
+  -- Визначаємо дату останнього розрахунку
+  SELECT @lastCalculationDate = CountsData FROM counts WHERE TenantID = @renter_id
+
+  -- Визначаємо поточну дату
+  SET @currentDate = GETDATE()
+
+  -- Визначаємо суму кредиту
+  SELECT @loanAmount = CountsSumma FROM counts WHERE CountsID = @contractId
+
+  -- Розраховуємо суму за останній період
+  SELECT @interest = @loanAmount  * DATEDIFF(day, @lastCalculationDate, @currentDate) 
+  FROM counts
+  WHERE CountsID = @contractId
+  AND CountsData <= @currentDate
+
+  -- Додаємо нараховані проценти до суми кредиту
+  UPDATE counts SET CountsSumma = CountsSumma + @interest, CountsData = @currentDate WHERE CountsID = @contractId
+END
+GO
+
+
+
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE CalculateInterestForAllClients
+AS
+BEGIN
+  DECLARE @contractID INT, @totalClients INT, @clientID INT
+
+  -- Отримуємо загальну кількість клієнтів
+  SELECT @totalClients = COUNT(*) FROM counts
+
+  -- Ініціалізуємо лічильник клієнтів
+  SET @contractID = 1
+
+  -- Починаємо цикл, який пройде всіх клієнтів
+  WHILE @contractID <= @totalClients
+  BEGIN
+    -- Викликаємо процедуру CalculateInterestForClient для поточного клієнта
+    SELECT @clientID = TenantID FROM counts 
+    WHERE @contractID = CountsID
+
+    EXEC CalculateInterestForClient @clientID
+
+    -- Збільшуємо лічильник клієнтів
+    SET @contractID = @contractID + 1
+  END
+END
+GO
+
+
+--EXEC [dbo].[test process] 6
+--EXEC [dbo].[CalculateInterestForClient] 1
+EXEC CalculateInterestForAllClients
+
+
+Lab 4
+Part 1
+insert into apartment(ApartmentID,ApartmentNumber,ApartmentArea,TypeID) values (5,6,78,2)
+
+update apartment set ApartmentArea = 80 where ApartmentID=5
+
+CREATE TRIGGER insertapartment
+ON apartment
+AFTER INSERT
+AS
+BEGIN
+    UPDATE apartment
+    SET UCR = CURRENT_USER, 
+        DCR = GETDATE()
+    FROM apartment
+    JOIN inserted ON apartment.ApartmentID = inserted.ApartmentID;
+END;
+
+
+
+
+
+
+
+CREATE TRIGGER updateapartment
+ON apartment
+AFTER UPDATE
+AS
+BEGIN
+    UPDATE apartment
+    SET ULC = CURRENT_USER, -- або вказуйте конкретне ім'я користувача
+        DLC = GETDATE()
+    FROM apartment
+    JOIN inserted ON apartment.ApartmentID = inserted.ApartmentID;
+END;
+
+
+Part 2
+CREATE TRIGGER bank_Insert
+ON bank
+INSTEAD OF INSERT
+AS
+BEGIN
+  SET NOCOUNT ON;
+
+  DECLARE @LastID INT;
+  
+  SELECT @LastID = ISNULL(MAX(BankID), 0) FROM bank;
+  
+  INSERT INTO bank(BankID, BankName, Registrationcod)
+  SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) + @LastID, BankName, Registrationcod
+  FROM inserted;
+END;
+insert into bank(BankName,Registrationcod) values('kredo', 4569)
+
+
+
+Part 3
+CREATE TRIGGER prevent_double_booking_and_debt_check
+ON rent
+AFTER INSERT
+AS
+BEGIN
+    -- Перевірка на одночасну оренду кімнати двома орендарями
+    IF EXISTS (
+        SELECT 1
+        FROM rent
+        
+     WHERE ApartmentID IN (SELECT ApartmentID FROM inserted)
+        GROUP BY ApartmentID
+        HAVING COUNT(*) > 1
+    )
+    BEGIN
+        RAISERROR ('Ця кімната вже здана іншим орендарем.', 16, 1);
+        ROLLBACK;
+        RETURN;
+    END
+
+    -- Перевірка на борг орендаря перед отриманням нової оренди
+   
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN counts t ON i.TenantID = t.TenantID
+        WHERE t.CountsSumma > (i.rentAmount * 3)
+    )
+
+    BEGIN
+        RAISERROR ('Орендар має борг, який перевищує суму трьохмісячної оренди.', 16, 1);
+        ROLLBACK;
+        RETURN;
+    END;
+END;
+
+INSERT INTO rent(RentID,TenantID ,ApartmentID, Termfrom, Termupto, rentAmount)
+VALUES (4,1, 1, '2023-05-01', '2023-08-01', 1000);
+INSERT INTO rent(RentID,TenantID ,ApartmentID, Termfrom, Termupto, rentAmount)
+VALUES (4,2, 3, '2023-05-01', '2023-08-01', 8000);
+
+
+
+Lab 5
+CREATE LOGIN TenantUser WITH PASSWORD = 'Tenant123';
+CREATE USER TenantUser FOR LOGIN TenantUser;
+
+CREATE LOGIN BookerUser WITH PASSWORD = 'Booker123';
+CREATE USER BookerUser FOR LOGIN BookerUser;
+
+CREATE LOGIN AdminUser WITH PASSWORD = 'Admin123';
+CREATE USER AdminUser FOR LOGIN AdminUser;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tenant TO TenantUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.rent TO TenantUser;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.counts TO BookerUser;
+GRANT SELECT ON dbo.bank TO BookerUser;
+GRANT SELECT, INSERT, UPDATE ON dbo.apartmentType TO BookerUser;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.apartment TO AdminUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.apartmentType TO AdminUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.bank TO AdminUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.counts TO AdminUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.rent TO AdminUser;
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.tenant TO AdminUser;
+
+CREATE ROLE Tenant;
+CREATE ROLE Booker;
+CREATE ROLE Administrator;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON counts TO Administrator;
+GRANT SELECT, INSERT, UPDATE, DELETE ON bank TO Administrator;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON tenant TO Tenant;
+GRANT SELECT, INSERT, UPDATE, DELETE ON rent TO Tenant;
+GRANT SELECT ON counts TO Booker;
+
+ALTER ROLE Tenant ADD MEMBER TenantUser;
+ALTER ROLE Booker ADD MEMBER BookerUser;
+ALTER ROLE Administrator ADD MEMBER AdminUser;
+
+REVOKE DELETE ON rent TO Tenant;
+
+ALTER ROLE Tenant DROP MEMBER TenantUser;
+
+EXEC sp_helprotect @username = 'TenantUser';
+EXEC sp_helprole @rolename = 'Tenant';
+
+DROP ROLE Tenant;
+DROP USER [TenantUser];
